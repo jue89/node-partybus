@@ -21,20 +21,25 @@ const encode = (type, id, payload) => {
 	]);
 };
 
-const decode = (msg) => ({
-	type: msg[0],
-	id: msg.slice(1, 5),
-	payload: JSON.parse(msg.slice(5).toString(), (key, value) => {
-		if (typeof value === 'object' && value) {
-			if (value.type === 'Buffer' && value.data instanceof Array) {
-				return Buffer.from(value.data);
-			} else if (value.type === 'Date' && typeof value.data === 'string') {
-				return new Date(value.data);
+const decode = (msg) => {
+	const type = msg[0];
+	const id = msg.slice(1, 5);
+	const payload = msg.slice(5).toString();
+	return {
+		type: type,
+		id: id,
+		payload: payload.length === 0 ? undefined : JSON.parse(payload, (key, value) => {
+			if (typeof value === 'object' && value) {
+				if (value.type === 'Buffer' && value.data instanceof Array) {
+					return Buffer.from(value.data);
+				} else if (value.type === 'Date' && typeof value.data === 'string') {
+					return new Date(value.data);
+				}
 			}
-		}
-		return value;
-	})
-});
+			return value;
+		})
+	};
+};
 
 function Partybus (realm) {
 	this.listeners = {};
@@ -50,33 +55,29 @@ function Partybus (realm) {
 		// Remove all events related to neigh
 		this.remoteEvents = this.remoteEvents.filter((e) => e.neigh !== neigh);
 	}).on('message', (msg, neigh) => {
-		// TODO: Check message length
-		msg = decode(msg);
-		switch (msg.type) {
-			case SUBSCRIBE:
+		try {
+			if (msg.length < 5) return;
+			msg = decode(msg);
+			if (msg.type === SUBSCRIBE) {
 				this.remoteEvents.push({
 					id: msg.id,
 					eventNameRegexp: msg.payload,
 					eventName: new RegExp(msg.payload),
 					neigh: neigh
 				});
-				break;
-			case EVENT:
+			} else if (msg.type === EVENT) {
 				this._callListener(
 					msg.id,
 					msg.payload.shift(),
 					neigh,
 					msg.payload
 				);
-				break;
-			default:
-				// TODO
-		}
+			}
+		} catch (e) {}
 	});
 }
 
 Partybus.prototype._callListener = function (id, eventName, source, args) {
-	// TODO: Check if listener exists
 	this.listeners[id.toString('hex')].apply({
 		event: eventName,
 		source: source

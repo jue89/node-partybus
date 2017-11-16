@@ -254,3 +254,21 @@ test('convert json to dates', () => {
 		expect(arg.toISOString()).toEqual('1995-12-17T03:24:00.000Z');
 	});
 });
+
+test('ignore short messages', () => {
+	return partybus({}).then((p) => {
+		tubemail.__realm.emit('message', Buffer.concat([
+			Buffer.from([2]),
+			Buffer.from([0, 0, 0])
+		]));
+	});
+});
+
+test('ignore undecodable messages', () => {
+	return partybus({}).then((p) => {
+		tubemail.__realm.emit('message', Buffer.concat([
+			Buffer.from([2]),
+			Buffer.from([0, 0, 0, 0])
+		]));
+	});
+});
