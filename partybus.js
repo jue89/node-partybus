@@ -4,16 +4,36 @@ const SUBSCRIBE = 0;
 // const UNSUBSCRIBE = 1;
 const EVENT = 2;
 
-// TODO: Buffer objects, date objects
-const encode = (type, id, payload) => Buffer.concat([
-	Buffer.from([type]),
-	id,
-	Buffer.from(JSON.stringify(payload))
-]);
+const encode = (type, id, payload) => {
+	// Dirty hack to convert Date to object instead of a string
+	/* eslint no-extend-native: ["error", { "exceptions": ["Date"] }] */
+	const backupToJSON = Date.prototype.toJSON;
+	Date.prototype.toJSON = function () {
+		return { type: 'Date', data: this.toISOString() };
+	};
+	payload = JSON.stringify(payload);
+	Date.prototype.toJSON = backupToJSON;
+
+	return Buffer.concat([
+		Buffer.from([type]),
+		id,
+		Buffer.from(payload)
+	]);
+};
+
 const decode = (msg) => ({
 	type: msg[0],
 	id: msg.slice(1, 5),
-	payload: JSON.parse(msg.slice(5).toString())
+	payload: JSON.parse(msg.slice(5).toString(), (key, value) => {
+		if (typeof value === 'object' && value) {
+			if (value.type === 'Buffer' && value.data instanceof Array) {
+				return Buffer.from(value.data);
+			} else if (value.type === 'Date' && typeof value.data === 'string') {
+				return new Date(value.data);
+			}
+		}
+		return value;
+	})
 });
 
 function Partybus (realm) {

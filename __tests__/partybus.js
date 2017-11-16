@@ -200,3 +200,57 @@ test('remove events of disappered neighbours', () => {
 		expect(p.remoteEvents[0].neigh).toBe(neighs[1]);
 	});
 });
+
+test('convert buffers to json', () => {
+	return partybus({}).then((p) => {
+		p.remoteEvents = [{
+			neigh: { send: jest.fn() },
+			id: Buffer.from('0000'),
+			eventName: /^a$/
+		}];
+		p.emit('a', Buffer.from([0, 1, 2, 3]));
+		const msg = p.remoteEvents[0].neigh.send.mock.calls[0][0];
+		expect(msg.slice(5).toString()).toEqual('["a",{"type":"Buffer","data":[0,1,2,3]}]');
+	});
+});
+
+test('convert dates to json', () => {
+	return partybus({}).then((p) => {
+		p.remoteEvents = [{
+			neigh: { send: jest.fn() },
+			id: Buffer.from('0000'),
+			eventName: /^a$/
+		}];
+		p.emit('a', new Date('1995-12-17T03:24:00'));
+		const msg = p.remoteEvents[0].neigh.send.mock.calls[0][0];
+		expect(msg.slice(5).toString()).toEqual('["a",{"type":"Date","data":"1995-12-17T03:24:00.000Z"}]');
+	});
+});
+
+test('convert json to buffers', () => {
+	return partybus({}).then((p) => {
+		let arg;
+		p.listeners['00000000'] = (a) => { arg = a; };
+		tubemail.__realm.emit('message', Buffer.concat([
+			Buffer.from([2]),
+			Buffer.from([0, 0, 0, 0]),
+			Buffer.from('["a",{"type":"Buffer","data":[0,1,2,3]}]')
+		]));
+		expect(arg).toBeInstanceOf(Buffer);
+		expect(arg.toString('hex')).toEqual('00010203');
+	});
+});
+
+test('convert json to dates', () => {
+	return partybus({}).then((p) => {
+		let arg;
+		p.listeners['00000000'] = (a) => { arg = a; };
+		tubemail.__realm.emit('message', Buffer.concat([
+			Buffer.from([2]),
+			Buffer.from([0, 0, 0, 0]),
+			Buffer.from('["a",{"type":"Date","data":"1995-12-17T03:24:00.000Z"}]')
+		]));
+		expect(arg).toBeInstanceOf(Date);
+		expect(arg.toISOString()).toEqual('1995-12-17T03:24:00.000Z');
+	});
+});
