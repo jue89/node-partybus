@@ -84,8 +84,14 @@ Partybus.prototype._callListener = function (id, eventName, source, args) {
 	}, args);
 };
 
+const eventNameOn = /^[0-9a-zA-Z$.:_\-+#]*$/;
 Partybus.prototype.on = function (eventNameRegexp, listener) {
-	// TODO: Check args
+	if (!eventNameOn.test(eventNameRegexp)) {
+		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ - + #');
+	}
+	if (typeof listener !== 'function') {
+		throw new Error('Event handler must be of type function');
+	}
 
 	// The ID identifies the event listener
 	// In combination with the tubemail ID it is unique
@@ -113,8 +119,11 @@ Partybus.prototype.on = function (eventNameRegexp, listener) {
 	return this;
 };
 
+const eventNameEmit = /^[0-9a-zA-Z$.:_\-]*$/;
 Partybus.prototype.emit = function (eventName) {
-	// TODO: Check args
+	if (!eventNameEmit.test(eventName)) {
+		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ -');
+	}
 
 	const args = Array.prototype.slice.call(arguments);
 

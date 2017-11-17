@@ -272,3 +272,30 @@ test('ignore undecodable messages', () => {
 		]));
 	});
 });
+
+test('complain about unallowed chars in event name', () => {
+	return partybus({}).then((p) => {
+		p.on('(', () => {});
+		throw new Error('Failed');
+	}).catch((e) => {
+		expect(e.message).toEqual('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ - + #');
+	});
+});
+
+test('complain about missing event handler', () => {
+	return partybus({}).then((p) => {
+		p.on('09azAZ$.:_-+#');
+		throw new Error('Failed');
+	}).catch((e) => {
+		expect(e.message).toEqual('Event handler must be of type function');
+	});
+});
+
+test('complain about unallowed chars in event name', () => {
+	return partybus({}).then((p) => {
+		p.emit('+');
+		throw new Error('Failed');
+	}).catch((e) => {
+		expect(e.message).toEqual('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ -');
+	});
+});
