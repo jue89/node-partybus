@@ -1,6 +1,6 @@
 {
   "name": "partybus",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Distrubted event bus",
   "main": "partybus.js",
   "directories": {},
@@ -8,8 +8,16 @@
     "test": "happiness && jest",
     "watch": "jest --watchAll"
   },
-  "author": "Jue <me@jue.yt>",
+  "author": "Juergen Fitschen <me@jue.yt>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jue89/node-partybus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jue89/node-partybus/issues"
+  },
+  "homepage": "https://github.com/jue89/node-partybus#readme",
   "dependencies": {
      "tubemail": "^1.0.0"
   },
@@ -23,7 +31,7 @@
       "describe",
       "test",
       "expect",
-	  "beforeEach"
+      "beforeEach"
     ]
   },
   "jest": {
