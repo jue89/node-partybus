@@ -1,15 +1,17 @@
 # Party Bus 🎉🚌
 
-This is a distributed event bus using [Tubemail](https://github.com/jue89/node-tubemail) under the hood. This means you can emit events over IP networks of any kind - including the Internet. And all of this is secured by TLS connections. So it is safe to use this over non-trustworthy network :)
+This is a distributed event bus using [Tube Mail](https://github.com/jue89/node-tubemail) under the hood. This means you can emit events over IP networks of any kind - including the Internet. And all of this is secured by TLS connections. So it is safe to use this over non-trustworthy network :)
 
 *Party Bus* was initially developed for building distributed microservices on top. But you can use them whenever you want your events to travel across the Node.js process boundaries.
 
 
 # Example
 
-Don't be scared - but first of all you need a PKI for the TLS stuff. [Tubemail](https://github.com/jue89/node-tubemail) has a bunch of little helper scripts to do that the easy way:
+Don't be scared - but first of all you need a PKI for the TLS stuff. [Tube Mail](https://github.com/jue89/node-tubemail) has a bunch of little helper scripts to do that the easy way:
 
 ```sh
+apt install libavahi-compat-libdnssd-dev
+
 npm install -g tubemail tubemail-mdns partybus
 
 mkdir pki
@@ -93,8 +95,8 @@ Joins / create a new event bus. ```opts``` is an object:
    * ```stopDiscovery```: Will be called by *Party Bus* if discovery shall be stopped.
 
 You do not have to implement the discovery by yourself if you don't want to. Check out the *Tube Mail* discovery libraries - they are fully compatible:
- * *tubemail-mdns*: Discovers other peers on the local network using mDNS / DNS-SD.
- * *tubemail-dht*: (Ab)uses the Bittorrent DHT for discovering peers on the internet. TBH: This feels a little bit magical :) Don't forget to forward the ports if you are forced to have your peer behind some *evil* NAT.
+ * [tubemail-mdns](https://github.com/jue89/node-tubemail-mdns): Discovers other peers on the local network using mDNS / DNS-SD.
+ * [tubemail-dht](https://github.com/jue89/node-tubemail-dht): (Ab)uses the Bittorrent DHT for discovering peers on the internet. TBH: This feels a little bit magical :) Don't forget to forward the ports if you are forced to have your peer behind some *evil* NAT.
 
 Resolved ```bus``` is an instance of Bus.
 
@@ -102,7 +104,7 @@ Resolved ```bus``` is an instance of Bus.
 
 ### Property: realm
 
-Information about the connection. See [Tubemail Realm](https://github.com/jue89/node-tubemail#class-realm) for details. But please keep your hands off the ```send()``` method ;)
+Information about the connection. See [Tube Mail Realm](https://github.com/jue89/node-tubemail#class-realm) for details. But please keep your hands off the ```send()``` method ;)
 
 ### Method: emit
 
@@ -124,4 +126,4 @@ With ```selector``` events to listen on is can be specified. On top it allows fo
 
 The function ```callback``` is called if an event occurs that matches ```selector```. The event's ```...args``` are the function call's arguments. In the function's scope ```this``` is an object with the items:
  * ```event```: The event name. This is handy if many events would match ```selector```.
- * ```source```: The source of the event. For details lookup [Tubemail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
+ * ```source```: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
