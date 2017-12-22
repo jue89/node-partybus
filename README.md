@@ -136,3 +136,12 @@ bus.removeListener(selector, callback);
 ```
 
 Removes a previously added event listener. Call this with the same arguments you used for the ```bus.on(...)``` call.
+
+
+### Method: removeAllListeners
+
+```js
+bus.removeAllListeners([selector]);
+```
+
+Removes all event listeners, or those of the specified ```selector```.

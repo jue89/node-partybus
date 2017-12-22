@@ -358,3 +358,44 @@ test('notify peers about removed events', () => {
 		expect(tubemail.__realm.send.mock.calls[0][0].toString()).toEqual(msg.toString());
 	});
 });
+
+test('remove events by selector', () => {
+	return partybus({}).then((p) => {
+		const id1 = Buffer.from([0, 0, 0, 0]);
+		const id2 = Buffer.from([0, 0, 0, 1]);
+		const id3 = Buffer.from([0, 0, 0, 2]);
+		const listener = () => {};
+		p.listeners[id1.toString('hex')] = listener;
+		p.listeners[id2.toString('hex')] = listener;
+		p.listeners[id3.toString('hex')] = listener;
+		const event1 = { id: id1, eventNameSelector: 'a', listener: listener };
+		const event2 = { id: id2, eventNameSelector: 'a', listener: listener };
+		const event3 = { id: id2, eventNameSelector: 'b', listener: listener };
+		p.localEvents = [event1, event2, event3];
+
+		p.removeAllListeners('a');
+
+		expect(p.localEvents.length).toEqual(1);
+		expect(p.localEvents[0]).toBe(event3);
+	});
+});
+
+test('remove all events', () => {
+	return partybus({}).then((p) => {
+		const id1 = Buffer.from([0, 0, 0, 0]);
+		const id2 = Buffer.from([0, 0, 0, 1]);
+		const id3 = Buffer.from([0, 0, 0, 2]);
+		const listener = () => {};
+		p.listeners[id1.toString('hex')] = listener;
+		p.listeners[id2.toString('hex')] = listener;
+		p.listeners[id3.toString('hex')] = listener;
+		const event1 = { id: id1, eventNameSelector: 'a', listener: listener };
+		const event2 = { id: id2, eventNameSelector: 'a', listener: listener };
+		const event3 = { id: id2, eventNameSelector: 'b', listener: listener };
+		p.localEvents = [event1, event2, event3];
+
+		p.removeAllListeners();
+
+		expect(p.localEvents.length).toEqual(0);
+	});
+});

@@ -128,12 +128,11 @@ Partybus.prototype.on = function (eventNameSelector, listener) {
 	return this;
 };
 
-Partybus.prototype.removeListener = function (eventNameSelector, listener) {
+Partybus.prototype._removeListener = function (removeTest) {
 	// Remove all matching event
 	this.localEvents = this.localEvents.filter((e) => {
 		// Skip non-matching evnets
-		const remove = e.eventNameSelector === eventNameSelector && e.listener === listener;
-		if (!remove) return true;
+		if (!removeTest(e)) return true;
 
 		// Remove event from all other peers
 		this.realm.send(encode(UNSUBSCRIBE, e.id));
@@ -143,7 +142,19 @@ Partybus.prototype.removeListener = function (eventNameSelector, listener) {
 
 		return false;
 	});
+};
 
+Partybus.prototype.removeListener = function (eventNameSelector, listener) {
+	const removeTest = (e) => e.eventNameSelector === eventNameSelector && e.listener === listener;
+	this._removeListener(removeTest);
+	return this;
+};
+
+Partybus.prototype.removeAllListeners = function (eventNameSelector) {
+	const removeTest = eventNameSelector === undefined
+		? (e) => true
+		: (e) => e.eventNameSelector === eventNameSelector;
+	this._removeListener(removeTest);
 	return this;
 };
 
