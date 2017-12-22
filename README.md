@@ -127,3 +127,12 @@ With ```selector``` events to listen on is can be specified. On top it allows fo
 The function ```callback``` is called if an event occurs that matches ```selector```. The event's ```...args``` are the function call's arguments. In the function's scope ```this``` is an object with the items:
  * ```event```: The event name. This is handy if many events would match ```selector```.
  * ```source```: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
+
+
+### Method: removeListener
+
+```js
+bus.removeListener(selector, callback);
+```
+
+Removes a previously added event listener. Call this with the same arguments you used for the ```bus.on(...)``` call.
