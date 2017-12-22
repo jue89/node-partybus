@@ -1,18 +1,22 @@
 const tubemail = require('tubemail');
 
 const SUBSCRIBE = 0;
-// const UNSUBSCRIBE = 1;
+const UNSUBSCRIBE = 1;
 const EVENT = 2;
 
 const encode = (type, id, payload) => {
-	// Dirty hack to convert Date to object instead of a string
-	/* eslint no-extend-native: ["error", { "exceptions": ["Date"] }] */
-	const backupToJSON = Date.prototype.toJSON;
-	Date.prototype.toJSON = function () {
-		return { type: 'Date', data: this.toISOString() };
-	};
-	payload = JSON.stringify(payload);
-	Date.prototype.toJSON = backupToJSON;
+	if (payload !== undefined) {
+		// Dirty hack to convert Date to object instead of a string
+		/* eslint no-extend-native: ["error", { "exceptions": ["Date"] }] */
+		const backupToJSON = Date.prototype.toJSON;
+		Date.prototype.toJSON = function () {
+			return { type: 'Date', data: this.toISOString() };
+		};
+		payload = JSON.stringify(payload);
+		Date.prototype.toJSON = backupToJSON;
+	} else {
+		payload = '';
+	}
 
 	return Buffer.concat([
 		Buffer.from([type]),
@@ -65,6 +69,10 @@ function Partybus (realm) {
 					eventName: new RegExp(msg.payload),
 					neigh: neigh
 				});
+			} else if (msg.type === UNSUBSCRIBE) {
+				this.remoteEvents = this.remoteEvents.filter((e) => {
+					return !(e.neigh === neigh && Buffer.compare(e.id, msg.id) === 0);
+				});
 			} else if (msg.type === EVENT) {
 				this._callListener(
 					msg.id,
@@ -85,8 +93,8 @@ Partybus.prototype._callListener = function (id, eventName, source, args) {
 };
 
 const eventNameOn = /^[0-9a-zA-Z$.:_+#-]*$/;
-Partybus.prototype.on = function (eventNameRegexp, listener) {
-	if (!eventNameOn.test(eventNameRegexp)) {
+Partybus.prototype.on = function (eventNameSelector, listener) {
+	if (!eventNameOn.test(eventNameSelector)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ - + #');
 	}
 	if (typeof listener !== 'function') {
@@ -99,16 +107,17 @@ Partybus.prototype.on = function (eventNameRegexp, listener) {
 	id.writeUInt32BE(this.cnt++, 0);
 
 	// Store listener and create a handle
-	eventNameRegexp = eventNameRegexp
+	const eventNameRegexp = '^' + eventNameSelector
 		.replace(/\./g, '\\.')
 		.replace(/\$/g, '\\$')
 		.replace(/\+/g, '[^\\.]*')
-		.replace(/#/g, '.*');
-	eventNameRegexp = `^${eventNameRegexp}$`;
+		.replace(/#/g, '.*') + '$';
 	const event = {
 		id: id,
+		eventNameSelector: eventNameSelector,
 		eventNameRegexp: eventNameRegexp,
-		eventName: new RegExp(eventNameRegexp)
+		eventName: new RegExp(eventNameRegexp),
+		listener: listener
 	};
 	this.localEvents.push(event);
 	this.listeners[id.toString('hex')] = listener;
@@ -116,6 +125,36 @@ Partybus.prototype.on = function (eventNameRegexp, listener) {
 	// Notify other peers about new event listener
 	this.realm.send(encode(SUBSCRIBE, id, event.eventNameRegexp));
 
+	return this;
+};
+
+Partybus.prototype._removeListener = function (removeTest) {
+	// Remove all matching event
+	this.localEvents = this.localEvents.filter((e) => {
+		// Skip non-matching evnets
+		if (!removeTest(e)) return true;
+
+		// Remove event from all other peers
+		this.realm.send(encode(UNSUBSCRIBE, e.id));
+
+		// Remove event listener
+		delete this.listeners[e.id.toString('hex')];
+
+		return false;
+	});
+};
+
+Partybus.prototype.removeListener = function (eventNameSelector, listener) {
+	const removeTest = (e) => e.eventNameSelector === eventNameSelector && e.listener === listener;
+	this._removeListener(removeTest);
+	return this;
+};
+
+Partybus.prototype.removeAllListeners = function (eventNameSelector) {
+	const removeTest = eventNameSelector === undefined
+		? (e) => true
+		: (e) => e.eventNameSelector === eventNameSelector;
+	this._removeListener(removeTest);
 	return this;
 };
 

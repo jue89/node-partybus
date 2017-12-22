@@ -1,6 +1,6 @@
 # Party Bus 🎉🚌
 
-This is a distributed event bus using [Tube Mail](https://github.com/jue89/node-tubemail) under the hood. This means you can emit events over IP networks of any kind - including the Internet. And all of this is secured by TLS connections. So it is safe to use this over non-trustworthy network :)
+This is a distributed event bus using [Tube Mail](https://github.com/jue89/node-tubemail) under the hood. This means you can emit events over IP networks of any kind - including the Internet. And all of this is secured by TLS connections. So it is safe to use this over non-trustworthy networks :)
 
 *Party Bus* was initially developed for building distributed microservices on top. But you can use them whenever you want your events to travel across the Node.js process boundaries.
 
@@ -40,7 +40,7 @@ require('partybus')({
 	key: fs.readFileSync('./party.dj.key'),
 	cert: fs.readFileSync('./party.dj.crt'),
 	ca: fs.readFileSync('./party.crt'),
-	discovery: require('./mdns.js')()
+	discovery: require('tubemail-mdns')()
 }).then((party) => {
 	// Make some noise!
 	const BPM = 140;
@@ -57,7 +57,7 @@ require('partybus')({
 	key: fs.readFileSync('./party.raver.key'),
 	cert: fs.readFileSync('./party.raver.crt'),
 	ca: fs.readFileSync('./party.crt'),
-	discovery: require('./mdns.js')()
+	discovery: require('tubemail-mdns')()
 }).then((party) => {
 	party.on('music', (beat) => console.log(beat));
 });
@@ -90,7 +90,7 @@ Joins / create a new event bus. ```opts``` is an object:
    * ```Object```: A port range. First port is specified by item ```from```, last one by item ```to```.
  * ```discovery```: Factory for discovery. Required. The factory's interface: ```(port, fingerPrint, newPeer) => stopDiscovery```:
    * ```port```: The actual port this peer is listening on.
-   * ```fingerPrint```: The realm's finger print for finding other peers. All peers using the same realm certificate will receive the same finger print to search for.
+   * ```fingerPrint```: The realm's fingerprint for finding other peers. All peers using the same realm certificate will receive the same fingerprint to search for.
    * ```newPeer```: A callback function that shall be called if discovery discovered a new peer. It awaits one object with the items ```host``` and ```port```. I think you know what to fill in ;)
    * ```stopDiscovery```: Will be called by *Party Bus* if discovery shall be stopped.
 
@@ -127,3 +127,21 @@ With ```selector``` events to listen on is can be specified. On top it allows fo
 The function ```callback``` is called if an event occurs that matches ```selector```. The event's ```...args``` are the function call's arguments. In the function's scope ```this``` is an object with the items:
  * ```event```: The event name. This is handy if many events would match ```selector```.
  * ```source```: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
+
+
+### Method: removeListener
+
+```js
+bus.removeListener(selector, callback);
+```
+
+Removes a previously added event listener. Call this with the same arguments you used for the ```bus.on(...)``` call.
+
+
+### Method: removeAllListeners
+
+```js
+bus.removeAllListeners([selector]);
+```
+
+Removes all event listeners, or those of the specified ```selector```.

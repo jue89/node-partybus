@@ -221,7 +221,7 @@ test('convert dates to json', () => {
 			id: Buffer.from('0000'),
 			eventName: /^a$/
 		}];
-		p.emit('a', new Date('1995-12-17T03:24:00'));
+		p.emit('a', new Date('1995-12-17T03:24:00Z'));
 		const msg = p.remoteEvents[0].neigh.send.mock.calls[0][0];
 		expect(msg.slice(5).toString()).toEqual('["a",{"type":"Date","data":"1995-12-17T03:24:00.000Z"}]');
 	});
@@ -297,5 +297,105 @@ test('complain about unallowed chars in event name', () => {
 		throw new Error('Failed');
 	}).catch((e) => {
 		expect(e.message).toEqual('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ -');
+	});
+});
+
+test('react to unsubscribe messages', () => {
+	return partybus({}).then((p) => {
+		const id1 = Buffer.from([0, 0, 0, 0]);
+		const id2 = Buffer.from([0, 0, 0, 1]);
+		const neigh = {};
+		const event1 = { id: id1, neigh };
+		const event2 = { id: id2, neigh };
+		p.remoteEvents = [event1, event2];
+
+		const msg = Buffer.concat([
+			Buffer.from([1]), // UNSUBSCRIBE
+			id1
+		]);
+		tubemail.__realm.emit('message', msg, neigh);
+
+		expect(p.remoteEvents.length).toEqual(1);
+		expect(p.remoteEvents[0]).toBe(event2);
+	});
+});
+
+test('remove events', () => {
+	return partybus({}).then((p) => {
+		const id1 = Buffer.from([0, 0, 0, 0]);
+		const id2 = Buffer.from([0, 0, 0, 1]);
+		const l1 = () => {};
+		const l2 = () => {};
+		p.listeners[id1.toString('hex')] = l1;
+		p.listeners[id2.toString('hex')] = l2;
+		const event1 = { id: id1, eventNameSelector: 'a', listener: l1 };
+		const event2 = { id: id2, eventNameSelector: 'a', listener: l2 };
+		p.localEvents = [event1, event2];
+
+		p.removeListener('a', l1);
+
+		expect(p.localEvents.length).toEqual(1);
+		expect(p.localEvents[0]).toBe(event2);
+		expect(p.listeners[id1.toString('hex')]).toBeUndefined();
+	});
+});
+
+test('notify peers about removed events', () => {
+	return partybus({}).then((p) => {
+		const id = Buffer.from([0, 0, 0, 0]);
+		const listener = () => {};
+		p.listeners[id.toString('hex')] = listener;
+		const event = { id, eventNameSelector: 'a', listener };
+		p.localEvents = [event];
+
+		p.removeListener('a', listener);
+
+		const msg = Buffer.concat([
+			Buffer.from([1]),
+			id
+		]);
+		expect(tubemail.__realm.send.mock.calls.length).toEqual(1);
+		expect(tubemail.__realm.send.mock.calls[0][0].toString()).toEqual(msg.toString());
+	});
+});
+
+test('remove events by selector', () => {
+	return partybus({}).then((p) => {
+		const id1 = Buffer.from([0, 0, 0, 0]);
+		const id2 = Buffer.from([0, 0, 0, 1]);
+		const id3 = Buffer.from([0, 0, 0, 2]);
+		const listener = () => {};
+		p.listeners[id1.toString('hex')] = listener;
+		p.listeners[id2.toString('hex')] = listener;
+		p.listeners[id3.toString('hex')] = listener;
+		const event1 = { id: id1, eventNameSelector: 'a', listener: listener };
+		const event2 = { id: id2, eventNameSelector: 'a', listener: listener };
+		const event3 = { id: id2, eventNameSelector: 'b', listener: listener };
+		p.localEvents = [event1, event2, event3];
+
+		p.removeAllListeners('a');
+
+		expect(p.localEvents.length).toEqual(1);
+		expect(p.localEvents[0]).toBe(event3);
+	});
+});
+
+test('remove all events', () => {
+	return partybus({}).then((p) => {
+		const id1 = Buffer.from([0, 0, 0, 0]);
+		const id2 = Buffer.from([0, 0, 0, 1]);
+		const id3 = Buffer.from([0, 0, 0, 2]);
+		const listener = () => {};
+		p.listeners[id1.toString('hex')] = listener;
+		p.listeners[id2.toString('hex')] = listener;
+		p.listeners[id3.toString('hex')] = listener;
+		const event1 = { id: id1, eventNameSelector: 'a', listener: listener };
+		const event2 = { id: id2, eventNameSelector: 'a', listener: listener };
+		const event3 = { id: id2, eventNameSelector: 'b', listener: listener };
+		p.localEvents = [event1, event2, event3];
+
+		p.removeAllListeners();
+
+		expect(p.localEvents.length).toEqual(0);
 	});
 });
