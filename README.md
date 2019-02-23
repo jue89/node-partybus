@@ -10,8 +10,6 @@ This is a distributed event bus using [Tube Mail](https://github.com/jue89/node-
 Don't be scared - but first of all you need a PKI for the TLS stuff. [Tube Mail](https://github.com/jue89/node-tubemail) has a bunch of little helper scripts to do that the easy way:
 
 ```sh
-apt install libavahi-compat-libdnssd-dev
-
 npm install -g tubemail tubemail-mdns partybus
 
 mkdir pki
@@ -40,7 +38,7 @@ require('partybus')({
 	key: fs.readFileSync('./party.dj.key'),
 	cert: fs.readFileSync('./party.dj.crt'),
 	ca: fs.readFileSync('./party.crt'),
-	discovery: require('tubemail-mdns')()
+	discovery: require('tubemail-mdns')
 }).then((party) => {
 	// Make some noise!
 	const BPM = 140;
@@ -57,7 +55,7 @@ require('partybus')({
 	key: fs.readFileSync('./party.raver.key'),
 	cert: fs.readFileSync('./party.raver.crt'),
 	ca: fs.readFileSync('./party.crt'),
-	discovery: require('tubemail-mdns')()
+	discovery: require('tubemail-mdns')
 }).then((party) => {
 	party.on('music', (beat) => console.log(beat));
 });
@@ -88,11 +86,7 @@ Joins / create a new event bus. ```opts``` is an object:
    * ```Number```: Listen on the specified port.
    * ```Array```: A list of ports. *Party Bus* will select a free one.
    * ```Object```: A port range. First port is specified by item ```from```, last one by item ```to```.
- * ```discovery```: Factory for discovery. Required. The factory's interface: ```(port, fingerPrint, newPeer) => stopDiscovery```:
-   * ```port```: The actual port this peer is listening on.
-   * ```fingerPrint```: The hood's fingerprint for finding other peers. All peers using the same hood certificate will receive the same fingerprint to search for.
-   * ```newPeer```: A callback function that shall be called if discovery discovered a new peer. It awaits one object with the items ```host``` and ```port```. I think you know what to fill in ;)
-   * ```stopDiscovery```: Will be called by *Party Bus* if discovery shall be stopped.
+ * ```discovery```: Factory for discovery service.
 
 You do not have to implement the discovery by yourself if you don't want to. Check out the *Tube Mail* discovery libraries - they are fully compatible:
  * [tubemail-mdns](https://github.com/jue89/node-tubemail-mdns): Discovers other peers on the local network using mDNS / DNS-SD.
