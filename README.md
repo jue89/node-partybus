@@ -23,8 +23,8 @@ STATE="Fairyland"
 LOCALITY="Rainbow"
 EOF
 
-# Create a new realm. All the Party Bus people must live in the same realm.
-createRealm party
+# Create a new hood. All the Party Bus people must live in the same hood.
+createHood party
 
 # For every party-goer we need a private key and certificate
 createPeer party dj
@@ -81,7 +81,7 @@ partybus(opts).then((bus) => {...});
 ```
 
 Joins / create a new event bus. ```opts``` is an object:
- * ```ca```: Realm's certificate. Required.
+ * ```ca```: Hood's certificate. Required.
  * ```key```: Peer's private key. Required.
  * ```cert```: Peer's certificate. Required.
  * ```port```: The port to listen on. Default: ```{from: 4816, to: 4819}```. It can be of type:
@@ -90,7 +90,7 @@ Joins / create a new event bus. ```opts``` is an object:
    * ```Object```: A port range. First port is specified by item ```from```, last one by item ```to```.
  * ```discovery```: Factory for discovery. Required. The factory's interface: ```(port, fingerPrint, newPeer) => stopDiscovery```:
    * ```port```: The actual port this peer is listening on.
-   * ```fingerPrint```: The realm's fingerprint for finding other peers. All peers using the same realm certificate will receive the same fingerprint to search for.
+   * ```fingerPrint```: The hood's fingerprint for finding other peers. All peers using the same hood certificate will receive the same fingerprint to search for.
    * ```newPeer```: A callback function that shall be called if discovery discovered a new peer. It awaits one object with the items ```host``` and ```port```. I think you know what to fill in ;)
    * ```stopDiscovery```: Will be called by *Party Bus* if discovery shall be stopped.
 
@@ -102,9 +102,9 @@ Resolved ```bus``` is an instance of Bus.
 
 ## Class: Bus
 
-### Property: realm
+### Property: hood
 
-Information about the connection. See [Tube Mail Realm](https://github.com/jue89/node-tubemail#class-realm) for details. But please keep your hands off the ```send()``` method ;)
+Information about the connection. See [Tube Mail Hood](https://github.com/jue89/node-tubemail#class-hood) for details. But please keep your hands off the ```send()``` method ;)
 
 ### Method: emit
 

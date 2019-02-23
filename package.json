@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/jue89/node-partybus#readme",
   "dependencies": {
-     "tubemail": "^1.0.1"
+    "tubemail": "git+https://github.com/jue89/node-tubemail.git#892bd2137244df937e1a0479b2d2c77777731399"
   },
   "devDependencies": {
     "happiness": "^10.0.2",

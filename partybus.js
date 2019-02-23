@@ -45,12 +45,12 @@ const decode = (msg) => {
 	};
 };
 
-function Partybus (realm) {
+function Partybus (hood) {
 	this.listeners = {};
 	this.remoteEvents = [];
 	this.localEvents = [];
 	this.cnt = 0;
-	this.realm = realm.on('foundNeigh', (neigh) => {
+	this.hood = hood.on('foundNeigh', (neigh) => {
 		// Register all events at new neighbour
 		this.localEvents.forEach((event) => {
 			neigh.send(encode(SUBSCRIBE, event.id, event.eventNameRegexp));
@@ -123,7 +123,7 @@ Partybus.prototype.on = function (eventNameSelector, listener) {
 	this.listeners[id.toString('hex')] = listener;
 
 	// Notify other peers about new event listener
-	this.realm.send(encode(SUBSCRIBE, id, event.eventNameRegexp));
+	this.hood.send(encode(SUBSCRIBE, id, event.eventNameRegexp));
 
 	return this;
 };
@@ -135,7 +135,7 @@ Partybus.prototype._removeListener = function (removeTest) {
 		if (!removeTest(e)) return true;
 
 		// Remove event from all other peers
-		this.realm.send(encode(UNSUBSCRIBE, e.id));
+		this.hood.send(encode(UNSUBSCRIBE, e.id));
 
 		// Remove event listener
 		delete this.listeners[e.id.toString('hex')];
@@ -168,11 +168,11 @@ Partybus.prototype.emit = function (eventName) {
 
 	this.localEvents
 		.filter((e) => e.eventName.test(eventName))
-		.forEach((e) => this._callListener(e.id, eventName, this.realm, args.slice(1)));
+		.forEach((e) => this._callListener(e.id, eventName, this.hood, args.slice(1)));
 
 	this.remoteEvents
 		.filter((e) => e.eventName.test(eventName))
 		.forEach((e) => e.neigh.send(encode(EVENT, e.id, args)));
 };
 
-module.exports = (opts) => tubemail(opts).then((realm) => new Partybus(realm));
+module.exports = (opts) => tubemail(opts).then((hood) => new Partybus(hood));
