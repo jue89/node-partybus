@@ -7,7 +7,7 @@ test('return a new Partybus instance', () => {
 	const opts = {};
 	return partybus(opts).then((p) => {
 		expect(tubemail.mock.calls[0][0]).toBe(opts);
-		expect(p.realm).toBe(tubemail.__realm);
+		expect(p.hood).toBe(tubemail.__hood);
 	});
 });
 
@@ -37,7 +37,7 @@ test('broadcast new event listener', () => {
 			Buffer.from([0, 0, 0, 0]), // LISTENER ID
 			Buffer.from('"^e0$"')      // EVENT NAME REGEXP
 		]).toString('hex');
-		expect(tubemail.__realm.send.mock.calls[0][0].toString('hex')).toEqual(msg);
+		expect(tubemail.__hood.send.mock.calls[0][0].toString('hex')).toEqual(msg);
 	});
 });
 
@@ -75,7 +75,7 @@ test('send new neighs local events', () => {
 			]).toString('hex');
 		});
 		const neigh = { send: jest.fn() };
-		tubemail.__realm.emit('foundNeigh', neigh);
+		tubemail.__hood.emit('foundNeigh', neigh);
 		expect(neigh.send.mock.calls[0][0].toString('hex')).toEqual(msgs[0]);
 		expect(neigh.send.mock.calls[1][0].toString('hex')).toEqual(msgs[1]);
 	});
@@ -98,7 +98,7 @@ test('react to subscribe messages', () => {
 			]);
 		});
 		msgs.forEach((msg) => {
-			tubemail.__realm.emit('message', msg, neigh);
+			tubemail.__hood.emit('message', msg, neigh);
 		});
 		events.forEach((e, i) => {
 			expect(p.remoteEvents[i].id.toString('hex')).toEqual(e.id.toString('hex'));
@@ -139,7 +139,7 @@ test('store additional info in this context', () => {
 		}];
 		p.emit('a');
 		expect(self.event).toEqual('a');
-		expect(self.source).toBe(tubemail.__realm);
+		expect(self.source).toBe(tubemail.__hood);
 	});
 });
 
@@ -181,7 +181,7 @@ test('react to event messages', () => {
 			Buffer.from('["a",true,null,"hello",5]')
 		]);
 		const neigh = {};
-		tubemail.__realm.emit('message', msg, neigh);
+		tubemail.__hood.emit('message', msg, neigh);
 		expect(args[0]).toEqual(true);
 		expect(args[1]).toEqual(null);
 		expect(args[2]).toEqual('hello');
@@ -195,7 +195,7 @@ test('remove events of disappered neighbours', () => {
 	return partybus({}).then((p) => {
 		const neighs = [{}, {}];
 		p.remoteEvents = neighs.map((n) => ({ neigh: n }));
-		tubemail.__realm.emit('lostNeigh', neighs[0]);
+		tubemail.__hood.emit('lostNeigh', neighs[0]);
 		expect(p.remoteEvents.length).toEqual(1);
 		expect(p.remoteEvents[0].neigh).toBe(neighs[1]);
 	});
@@ -231,7 +231,7 @@ test('convert json to buffers', () => {
 	return partybus({}).then((p) => {
 		let arg;
 		p.listeners['00000000'] = (a) => { arg = a; };
-		tubemail.__realm.emit('message', Buffer.concat([
+		tubemail.__hood.emit('message', Buffer.concat([
 			Buffer.from([2]),
 			Buffer.from([0, 0, 0, 0]),
 			Buffer.from('["a",{"type":"Buffer","data":[0,1,2,3]}]')
@@ -245,7 +245,7 @@ test('convert json to dates', () => {
 	return partybus({}).then((p) => {
 		let arg;
 		p.listeners['00000000'] = (a) => { arg = a; };
-		tubemail.__realm.emit('message', Buffer.concat([
+		tubemail.__hood.emit('message', Buffer.concat([
 			Buffer.from([2]),
 			Buffer.from([0, 0, 0, 0]),
 			Buffer.from('["a",{"type":"Date","data":"1995-12-17T03:24:00.000Z"}]')
@@ -257,7 +257,7 @@ test('convert json to dates', () => {
 
 test('ignore short messages', () => {
 	return partybus({}).then((p) => {
-		tubemail.__realm.emit('message', Buffer.concat([
+		tubemail.__hood.emit('message', Buffer.concat([
 			Buffer.from([2]),
 			Buffer.from([0, 0, 0])
 		]));
@@ -266,7 +266,7 @@ test('ignore short messages', () => {
 
 test('ignore undecodable messages', () => {
 	return partybus({}).then((p) => {
-		tubemail.__realm.emit('message', Buffer.concat([
+		tubemail.__hood.emit('message', Buffer.concat([
 			Buffer.from([2]),
 			Buffer.from([0, 0, 0, 0])
 		]));
@@ -313,7 +313,7 @@ test('react to unsubscribe messages', () => {
 			Buffer.from([1]), // UNSUBSCRIBE
 			id1
 		]);
-		tubemail.__realm.emit('message', msg, neigh);
+		tubemail.__hood.emit('message', msg, neigh);
 
 		expect(p.remoteEvents.length).toEqual(1);
 		expect(p.remoteEvents[0]).toBe(event2);
@@ -354,8 +354,8 @@ test('notify peers about removed events', () => {
 			Buffer.from([1]),
 			id
 		]);
-		expect(tubemail.__realm.send.mock.calls.length).toEqual(1);
-		expect(tubemail.__realm.send.mock.calls[0][0].toString()).toEqual(msg.toString());
+		expect(tubemail.__hood.send.mock.calls.length).toEqual(1);
+		expect(tubemail.__hood.send.mock.calls[0][0].toString()).toEqual(msg.toString());
 	});
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "partybus",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Distrubted event bus",
   "main": "partybus.js",
   "directories": {},
@@ -19,11 +19,11 @@
   },
   "homepage": "https://github.com/jue89/node-partybus#readme",
   "dependencies": {
-     "tubemail": "^1.0.1"
+    "tubemail": "^2.0.0"
   },
   "devDependencies": {
     "happiness": "^10.0.2",
-    "jest": "^21.2.1"
+    "jest": "^24.1.0"
   },
   "happiness": {
     "globals": [
