@@ -78,27 +78,27 @@ const partybus = require('partybus');
 partybus(opts).then((bus) => {...});
 ```
 
-Joins / create a new event bus. ```opts``` is an object:
- * ```ca```: Hood's certificate. Required.
- * ```key```: Peer's private key. Required.
- * ```cert```: Peer's certificate. Required.
- * ```port```: The port to listen on. Default: ```{from: 4816, to: 4819}```. It can be of type:
-   * ```Number```: Listen on the specified port.
-   * ```Array```: A list of ports. *Party Bus* will select a free one.
-   * ```Object```: A port range. First port is specified by item ```from```, last one by item ```to```.
- * ```discovery```: Factory for discovery service.
+Joins / create a new event bus. `opts` is an object:
+ * `ca`: Hood's certificate. Required.
+ * `key`: Peer's private key. Required.
+ * `cert`: Peer's certificate. Required.
+ * `port`: The port to listen on. Default: `{from: 4816, to: 4819}`. It can be of type:
+   * `Number`: Listen on the specified port.
+   * `Array`: A list of ports. *Party Bus* will select a free one.
+   * `Object`: A port range. First port is specified by item `from`, last one by item `to`.
+ * `discovery`: Factory for discovery service.
 
 You do not have to implement the discovery by yourself if you don't want to. Check out the *Tube Mail* discovery libraries - they are fully compatible:
  * [tubemail-mdns](https://github.com/jue89/node-tubemail-mdns): Discovers other peers on the local network using mDNS / DNS-SD.
  * [tubemail-dht](https://github.com/jue89/node-tubemail-dht): (Ab)uses the Bittorrent DHT for discovering peers on the internet. TBH: This feels a little bit magical :) Don't forget to forward the ports if you are forced to have your peer behind some *evil* NAT.
 
-Resolved ```bus``` is an instance of Bus.
+Resolved `bus` is an instance of Bus.
 
 ## Class: Bus
 
 ### Property: hood
 
-Information about the connection. See [Tube Mail Hood](https://github.com/jue89/node-tubemail#class-hood) for details. But please keep your hands off the ```send()``` method ;)
+Information about the connection. See [Tube Mail Hood](https://github.com/jue89/node-tubemail#class-hood) for details. But please keep your hands off the `send()` method ;)
 
 ### Method: emit
 
@@ -106,7 +106,7 @@ Information about the connection. See [Tube Mail Hood](https://github.com/jue89/
 bus.emit(event, [...args]);
 ```
 
-Raises ```event``` and hands over optional ```...args``` to all listeners.
+Raises `event` and hands over optional `...args` to all listeners.
 
 ### Method: on
 
@@ -114,13 +114,13 @@ Raises ```event``` and hands over optional ```...args``` to all listeners.
 bus.on(selector, callback);
 ```
 
-With ```selector``` events to listen on is can be specified. On top it allows for wildcards:
- * '+' matches all characters expect from '.'. Thus '.' is a predestined delimiter for grouping events.
- * '#' matches every character without any exceptions.
+With `selector` events to listen on is can be specified. On top it allows for wildcards:
+ * `'+'` matches all characters expect from `'.'`. Thus, `'.'` is a predestined delimiter for event grouping.
+ * `'#'` matches every character without any exceptions.
 
-The function ```callback``` is called if an event occurs that matches ```selector```. The event's ```...args``` are the function call's arguments. In the function's scope ```this``` is an object with the items:
- * ```event```: The event name. This is handy if many events would match ```selector```.
- * ```source```: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
+The function `callback` is called if an event occurs that matches `selector`. The event's `...args` are the function call's arguments. In the function's scope `this` is an object with the items:
+ * `event`: The event name. This is handy if many events would match `selector`.
+ * `source`: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
 
 
 ### Method: removeListener
@@ -129,7 +129,7 @@ The function ```callback``` is called if an event occurs that matches ```selecto
 bus.removeListener(selector, callback);
 ```
 
-Removes a previously added event listener. Call this with the same arguments you used for the ```bus.on(...)``` call.
+Removes a previously added event listener. Call this with the same arguments you used for the `bus.on(...)` call.
 
 
 ### Method: removeAllListeners
@@ -138,4 +138,4 @@ Removes a previously added event listener. Call this with the same arguments you
 bus.removeAllListeners([selector]);
 ```
 
-Removes all event listeners, or those of the specified ```selector```.
+Removes all event listeners, or those of the specified `selector`.
