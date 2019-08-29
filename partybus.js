@@ -86,10 +86,10 @@ function Partybus (hood) {
 }
 
 Partybus.prototype._callListener = function (id, eventName, source, args) {
-	this.listeners[id.toString('hex')].apply({
+	process.nextTick(() => this.listeners[id.toString('hex')].apply({
 		event: eventName,
 		source: source
-	}, args);
+	}, args));
 };
 
 const eventNameOn = /^[0-9a-zA-Z$.:_+#-]*$/;
