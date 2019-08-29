@@ -103,10 +103,10 @@ Information about the connection. See [Tube Mail Hood](https://github.com/jue89/
 ### Method: emit
 
 ```js
-bus.emit(event, [...args]);
+bus.emit(event, [...args]).then((cnt) => {...});
 ```
 
-Raises `event` and hands over optional `...args` to all listeners.
+Raises `event` and hands over optional `...args` to all listeners. Resolves `cnt` that states the count of called event handlers.
 
 ### Method: on
 

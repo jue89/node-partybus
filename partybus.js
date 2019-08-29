@@ -166,15 +166,15 @@ Partybus.prototype.emit = function (eventName) {
 
 	const args = Array.prototype.slice.call(arguments);
 
-	this.localEvents
+	const localJobs = this.localEvents
 		.filter((e) => e.eventName.test(eventName))
-		.forEach((e) => this._callListener(e.id, eventName, this.hood, args.slice(1)));
+		.map((e) => this._callListener(e.id, eventName, this.hood, args.slice(1)));
 
-	const jobs = this.remoteEvents
+	const remoteJobs = this.remoteEvents
 		.filter((e) => e.eventName.test(eventName))
 		.map((e) => e.neigh.send(encode(EVENT, e.id, args)));
 
-	return Promise.all(jobs);
+	return Promise.all(remoteJobs).then(() => localJobs.length + remoteJobs.length);
 };
 
 module.exports = (opts) => tubemail(opts).then((hood) => new Partybus(hood));
