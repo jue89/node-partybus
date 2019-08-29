@@ -156,21 +156,22 @@ test('call remote listeners on emitted event', () => {
 			id: Buffer.from([0, 0, 0, 1]),
 			eventNameRegexp: '^a$',
 			eventName: /^a$/,
-			neigh: { send: jest.fn() }
+			neigh: { send: jest.fn(() => Promise.resolve('yay')) }
 		}, {
 			id: Buffer.from([0, 0, 0, 2]),
 			eventNameRegexp: '^b$',
 			eventName: /^b$/,
-			neigh: { send: jest.fn() }
+			neigh: { send: jest.fn(() => Promise.resolve('nay')) }
 		}];
 		const obj = {};
-		p.emit('a', obj);
+		const q = p.emit('a', obj);
 		const msg = Buffer.concat([
 			Buffer.from([2]),
 			p.remoteEvents[0].id,
 			Buffer.from('["a",{}]')
 		]).toString('hex');
 		expect(p.remoteEvents[0].neigh.send.mock.calls[0][0].toString('hex')).toEqual(msg);
+		return expect(q).resolves.toMatchObject(['yay']);
 	});
 });
 

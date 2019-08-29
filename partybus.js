@@ -170,9 +170,11 @@ Partybus.prototype.emit = function (eventName) {
 		.filter((e) => e.eventName.test(eventName))
 		.forEach((e) => this._callListener(e.id, eventName, this.hood, args.slice(1)));
 
-	this.remoteEvents
+	const jobs = this.remoteEvents
 		.filter((e) => e.eventName.test(eventName))
-		.forEach((e) => e.neigh.send(encode(EVENT, e.id, args)));
+		.map((e) => e.neigh.send(encode(EVENT, e.id, args)));
+
+	return Promise.all(jobs);
 };
 
 module.exports = (opts) => tubemail(opts).then((hood) => new Partybus(hood));
