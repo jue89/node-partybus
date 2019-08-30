@@ -49,6 +49,7 @@ function Partybus (hood) {
 	this.listeners = {};
 	this.remoteEvents = [];
 	this.localEvents = [];
+	this.observers = [];
 	this.cnt = 0;
 	this.hood = hood.on('foundNeigh', (neigh) => {
 		// Register all events at new neighbour
@@ -57,21 +58,29 @@ function Partybus (hood) {
 		});
 	}).on('lostNeigh', (neigh) => {
 		// Remove all events related to neigh
-		this.remoteEvents = this.remoteEvents.filter((e) => e.neigh !== neigh);
+		this.remoteEvents = this.remoteEvents.filter((e) => {
+			const keep = e.neigh !== neigh;
+			if (!keep) this._updateObservers(e, -1);
+			return keep;
+		});
 	}).on('message', (msg, neigh) => {
 		try {
 			if (msg.length < 5) return;
 			msg = decode(msg);
 			if (msg.type === SUBSCRIBE) {
-				this.remoteEvents.push({
+				const event = {
 					id: msg.id,
 					eventNameRegexp: msg.payload,
 					eventName: new RegExp(msg.payload),
 					neigh: neigh
-				});
+				};
+				this.remoteEvents.push(event);
+				this._updateObservers(event, 1);
 			} else if (msg.type === UNSUBSCRIBE) {
 				this.remoteEvents = this.remoteEvents.filter((e) => {
-					return !(e.neigh === neigh && Buffer.compare(e.id, msg.id) === 0);
+					const keep = !(e.neigh === neigh && Buffer.compare(e.id, msg.id) === 0);
+					if (!keep) this._updateObservers(e, -1);
+					return keep;
 				});
 			} else if (msg.type === EVENT) {
 				this._callListener(
@@ -121,6 +130,7 @@ Partybus.prototype.on = function (eventNameSelector, listener) {
 	};
 	this.localEvents.push(event);
 	this.listeners[id.toString('hex')] = listener;
+	this._updateObservers(event, 1);
 
 	// Notify other peers about new event listener
 	this.hood.send(encode(SUBSCRIBE, id, event.eventNameRegexp));
@@ -139,6 +149,9 @@ Partybus.prototype._removeListener = function (removeTest) {
 
 		// Remove event listener
 		delete this.listeners[e.id.toString('hex')];
+
+		// Update observers
+		this._updateObservers(e, -1);
 
 		return false;
 	});
@@ -159,10 +172,14 @@ Partybus.prototype.removeAllListeners = function (eventNameSelector) {
 };
 
 const eventNameEmit = /^[0-9a-zA-Z$.:_-]*$/;
-Partybus.prototype.emit = function (eventName) {
+function checkEventNameEmit (eventName) {
 	if (!eventNameEmit.test(eventName)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ -');
 	}
+};
+
+Partybus.prototype.emit = function (eventName) {
+	checkEventNameEmit(eventName);
 
 	const args = Array.prototype.slice.call(arguments);
 
@@ -175,6 +192,31 @@ Partybus.prototype.emit = function (eventName) {
 		.map((e) => e.neigh.send(encode(EVENT, e.id, args)));
 
 	return Promise.all(remoteJobs).then(() => localJobs.length + remoteJobs.length);
+};
+
+Partybus.prototype.listenerCount = function (eventName) {
+	checkEventNameEmit(eventName);
+	const l = this.localEvents.filter((e) => e.eventName.test(eventName)).length;
+	const r = this.remoteEvents.filter((e) => e.eventName.test(eventName)).length;
+	return l + r;
+};
+
+Partybus.prototype.observeListenerCount = function (eventName, cb) {
+	let count = this.listenerCount(eventName);
+	const observer = {eventName, count, cb};
+	this.observers.push(observer);
+	cb(count);
+	return () => {
+		this.observers = this.observers.filter((o) => o !== observer);
+	};
+};
+
+Partybus.prototype._updateObservers = function (e, diff) {
+	this.observers.forEach((o) => {
+		if (!e.eventName.test(o.eventName)) return;
+		o.count += diff;
+		o.cb(o.count);
+	});
 };
 
 module.exports = (opts) => tubemail(opts).then((hood) => new Partybus(hood));

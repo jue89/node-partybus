@@ -123,6 +123,25 @@ The function `callback` is called if an event occurs that matches `selector`. Th
  * `source`: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
 
 
+### Method: listenerCount
+
+```js
+const count = bus.listenerCount(event);
+```
+
+Counts the amount of listeners listening for `event`.
+
+### Method: observeListenerCount
+
+```js
+const stop = bus.observeListenerCount(event, (count) => {});
+```
+
+Calls the given callback with the `count` of listeners for `event` everytime when `count` changes. The callback will be called with the current `count` after the observer has been registered.
+
+Calling `stop()` will remove the observer.
+
+
 ### Method: removeListener
 
 ```js
