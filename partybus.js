@@ -4,6 +4,8 @@ const SUBSCRIBE = 0;
 const UNSUBSCRIBE = 1;
 const EVENT = 2;
 
+const SPYFLAG = 0x80;
+
 const encode = (type, id, payload) => {
 	if (payload !== undefined) {
 		// Dirty hack to convert Date to object instead of a string
@@ -102,18 +104,20 @@ Partybus.prototype._callListener = function (id, eventName, source, args) {
 };
 
 const eventNameOn = /^[0-9a-zA-Z$.:_+#-]*$/;
-Partybus.prototype.on = function (eventNameSelector, listener) {
+Partybus.prototype.on = function (eventNameSelector, listener, opts) {
 	if (!eventNameOn.test(eventNameSelector)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ - + #');
 	}
 	if (typeof listener !== 'function') {
 		throw new Error('Event handler must be of type function');
 	}
+	if (!opts) opts = {};
 
 	// The ID identifies the event listener
 	// In combination with the tubemail ID it is unique
 	const id = Buffer.alloc(4);
 	id.writeUInt32BE(this.cnt++, 0);
+	if (opts.spy) id[0] |= SPYFLAG;
 
 	// Store listener and create a handle
 	const eventNameRegexp = '^' + eventNameSelector
@@ -185,19 +189,33 @@ Partybus.prototype.emit = function (eventName) {
 
 	const localJobs = this.localEvents
 		.filter((e) => e.eventName.test(eventName))
-		.map((e) => this._callListener(e.id, eventName, this.hood, args.slice(1)));
+		.map((e) => {
+			this._callListener(e.id, eventName, this.hood, args.slice(1));
+			return e;
+		})
+		.filter((e) => (e.id[0] & SPYFLAG) === 0x00);
 
 	const remoteJobs = this.remoteEvents
 		.filter((e) => e.eventName.test(eventName))
-		.map((e) => e.neigh.send(encode(EVENT, e.id, args)));
+		.map((e) => {
+			e.neigh.send(encode(EVENT, e.id, args));
+			return e;
+		})
+		.filter((e) => (e.id[0] & SPYFLAG) === 0x00);
 
 	return Promise.all(remoteJobs).then(() => localJobs.length + remoteJobs.length);
 };
 
 Partybus.prototype.listeners = function (eventName) {
 	checkEventNameEmit(eventName);
-	const l = this.localEvents.filter((e) => e.eventName.test(eventName)).map(() => this.hood);
-	const r = this.remoteEvents.filter((e) => e.eventName.test(eventName)).map((e) => e.neigh);
+	const l = this.localEvents.filter((e) => {
+		if (e.id[0] & SPYFLAG) return false;
+		return e.eventName.test(eventName);
+	}).map(() => this.hood);
+	const r = this.remoteEvents.filter((e) => {
+		if (e.id[0] & SPYFLAG) return false;
+		return e.eventName.test(eventName);
+	}).map((e) => e.neigh);
 	return l.concat(r);
 };
 
@@ -216,6 +234,7 @@ Partybus.prototype.observeListenerCount = function (eventName, cb) {
 };
 
 Partybus.prototype._updateObservers = function (e, diff) {
+	if (e.id[0] & SPYFLAG) return;
 	this.observers.forEach((o) => {
 		if (!e.eventName.test(o.eventName)) return;
 		o.count += diff;

@@ -113,11 +113,15 @@ test('react to subscribe messages', () => {
 test('call local listeners on emitted event', () => {
 	return partybus({}).then(async (p) => {
 		const obj = {};
-		let arg;
-		p.cbs['00000001'] = (a) => { arg = a; };
-		p.cbs['00000002'] = () => { arg = null; };
+		p.cbs['00000001'] = jest.fn();
+		p.cbs['80000001'] = jest.fn();
+		p.cbs['00000002'] = jest.fn();
 		p.localEvents = [{
 			id: Buffer.from([0, 0, 0, 1]),
+			eventNameRegexp: '^a$',
+			eventName: /^a$/
+		}, {
+			id: Buffer.from([0x80, 0, 0, 1]),
 			eventNameRegexp: '^a$',
 			eventName: /^a$/
 		}, {
@@ -128,7 +132,9 @@ test('call local listeners on emitted event', () => {
 		const q = p.emit('a', obj);
 		await expect(q).resolves.toBe(1);
 		await nextLoop();
-		expect(arg).toBe(obj);
+		expect(p.cbs['00000001'].mock.calls[0][0]).toBe(obj);
+		expect(p.cbs['80000001'].mock.calls[0][0]).toBe(obj);
+		expect(p.cbs['00000002'].mock.calls.length).toBe(0);
 	});
 });
 
@@ -153,6 +159,11 @@ test('call remote listeners on emitted event', () => {
 	return partybus({}).then((p) => {
 		p.remoteEvents = [{
 			id: Buffer.from([0, 0, 0, 1]),
+			eventNameRegexp: '^a$',
+			eventName: /^a$/,
+			neigh: { send: jest.fn(() => Promise.resolve()) }
+		}, {
+			id: Buffer.from([0x80, 0, 0, 1]),
 			eventNameRegexp: '^a$',
 			eventName: /^a$/,
 			neigh: { send: jest.fn(() => Promise.resolve()) }
@@ -202,7 +213,7 @@ test('react to event messages', () => {
 test('remove events of disappered neighbours', () => {
 	return partybus({}).then((p) => {
 		const neighs = [{}, {}];
-		p.remoteEvents = neighs.map((n) => ({ neigh: n }));
+		p.remoteEvents = neighs.map((n) => ({neigh: n, id: Buffer.alloc(4)}));
 		tubemail.__hood.emit('lostNeigh', neighs[0]);
 		expect(p.remoteEvents.length).toEqual(1);
 		expect(p.remoteEvents[0].neigh).toBe(neighs[1]);
@@ -412,10 +423,12 @@ test('remove all events', () => {
 
 test('count listeners for an event', () => {
 	return partybus({}).then((p) => {
-		p.localEvents.push({eventName: /^a$/});
-		p.localEvents.push({eventName: /^b$/});
-		p.remoteEvents.push({eventName: /^a$/});
-		p.remoteEvents.push({eventName: /^b$/});
+		p.localEvents.push({eventName: /^a$/, id: Buffer.alloc(4)});
+		p.localEvents.push({eventName: /^a$/, id: Buffer.alloc(4, 0x80)});
+		p.localEvents.push({eventName: /^b$/, id: Buffer.alloc(4)});
+		p.remoteEvents.push({eventName: /^a$/, id: Buffer.alloc(4)});
+		p.remoteEvents.push({eventName: /^a$/, id: Buffer.alloc(4, 0x80)});
+		p.remoteEvents.push({eventName: /^b$/, id: Buffer.alloc(4)});
 		expect(p.listenerCount('a')).toBe(2);
 	});
 });
@@ -433,11 +446,14 @@ test('observe listener count changes: local', () => {
 	return partybus({}).then((p) => {
 		const fn = () => {};
 		p.on('a', fn);
+		p.on('a', () => {}, {spy: true});
 		const onChange = jest.fn();
 		p.observeListenerCount('a', onChange);
 		expect(onChange.mock.calls.length).toBe(1);
 		expect(onChange.mock.calls[0][0]).toBe(1);
 		p.on('b', () => {});
+		expect(onChange.mock.calls.length).toBe(1);
+		p.on('a', () => {}, {spy: true});
 		expect(onChange.mock.calls.length).toBe(1);
 		p.on('#', () => {});
 		expect(onChange.mock.calls.length).toBe(2);
@@ -507,10 +523,10 @@ test('return destitions for an event', () => {
 	return partybus({}).then((p) => {
 		const neigh1 = {};
 		const neigh2 = {};
-		p.localEvents.push({eventName: /^a$/});
-		p.localEvents.push({eventName: /^b$/});
-		p.remoteEvents.push({eventName: /^a$/, neigh: neigh1});
-		p.remoteEvents.push({eventName: /^b$/, neigh: neigh2});
+		p.localEvents.push({eventName: /^a$/, id: Buffer.alloc(4)});
+		p.localEvents.push({eventName: /^b$/, id: Buffer.alloc(4)});
+		p.remoteEvents.push({eventName: /^a$/, neigh: neigh1, id: Buffer.alloc(4)});
+		p.remoteEvents.push({eventName: /^b$/, neigh: neigh2, id: Buffer.alloc(4)});
 		const l = p.listeners('a');
 		expect(l[0]).toBe(tubemail.__hood);
 		expect(l[1]).toBe(neigh1);

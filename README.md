@@ -111,7 +111,7 @@ Raises `event` and hands over optional `...args` to all listeners. Resolves `cnt
 ### Method: on
 
 ```js
-bus.on(selector, callback);
+bus.on(selector, callback[, opts]);
 ```
 
 With `selector` events to listen on is can be specified. On top it allows for wildcards:
@@ -122,6 +122,8 @@ The function `callback` is called if an event occurs that matches `selector`. Th
  * `event`: The event name. This is handy if many events would match `selector`.
  * `source`: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
 
+The optional object `opts` may specify the following options:
+ * `spy`: Don't count this listener in when couting listeners. (cf. methods `listeners()`, `listenerCount()`, `observeListenerCount()`)
 
 ### Method: listenerCount
 
