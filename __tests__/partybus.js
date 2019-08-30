@@ -45,10 +45,8 @@ test('broadcast new event listener', () => {
 
 test('escape \'.\' and \'$\' in event names', () => {
 	return partybus({}).then((p) => {
-		p.on('e0.sub0', () => {});
-		expect(p.localEvents[0].eventNameRegexp).toEqual('^e0\\.sub0$');
-		p.on('e0$sub0', () => {});
-		expect(p.localEvents[1].eventNameRegexp).toEqual('^e0\\$sub0$');
+		p.on('$e0.sub0', () => {});
+		expect(p.localEvents[0].eventNameRegexp).toEqual('^\\$e0\\.sub0$');
 	});
 });
 
@@ -57,7 +55,7 @@ test('make \'+\' and \'#\' to wildcards', () => {
 		p.on('e0.+', () => {});
 		expect(p.localEvents[0].eventNameRegexp).toEqual('^e0\\.[^\\.]*$');
 		p.on('e0.#', () => {});
-		expect(p.localEvents[1].eventNameRegexp).toEqual('^e0\\..*$');
+		expect(p.localEvents[1].eventNameRegexp).toEqual('^e0\\.[^$]*$');
 	});
 });
 
@@ -305,7 +303,7 @@ test('complain about unallowed chars in event name', () => {
 
 test('complain about missing event handler', () => {
 	return partybus({}).then((p) => {
-		p.on('09azAZ$.:_-+#');
+		p.on('$09azAZ.:_-+#');
 		throw new Error('Failed');
 	}).catch((e) => {
 		expect(e.message).toEqual('Event handler must be of type function');

@@ -103,7 +103,7 @@ Partybus.prototype._callListener = function (id, eventName, source, args) {
 	}, args));
 };
 
-const eventNameOn = /^[0-9a-zA-Z$.:_+#-]*$/;
+const eventNameOn = /^[0-9a-zA-Z$.:_+#-][0-9a-zA-Z.:_+#-]*$/;
 Partybus.prototype.on = function (eventNameSelector, listener, opts) {
 	if (!eventNameOn.test(eventNameSelector)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ - + #');
@@ -124,7 +124,7 @@ Partybus.prototype.on = function (eventNameSelector, listener, opts) {
 		.replace(/\./g, '\\.')
 		.replace(/\$/g, '\\$')
 		.replace(/\+/g, '[^\\.]*')
-		.replace(/#/g, '.*') + '$';
+		.replace(/#/g, '[^$]*') + '$';
 	const event = {
 		id: id,
 		eventNameSelector: eventNameSelector,
@@ -175,7 +175,7 @@ Partybus.prototype.removeAllListeners = function (eventNameSelector) {
 	return this;
 };
 
-const eventNameEmit = /^[0-9a-zA-Z$.:_-]*$/;
+const eventNameEmit = /^[0-9a-zA-Z$.:_-][0-9a-zA-Z.:_-]*$/;
 function checkEventNameEmit (eventName) {
 	if (!eventNameEmit.test(eventName)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ -');
