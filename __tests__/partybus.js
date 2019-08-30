@@ -18,12 +18,12 @@ test('create an event id on every on() call and store listeners and event handle
 		const l0 = () => {};
 		const l1 = () => {};
 		p.on('e0', l0).on('e1', l1);
-		expect(p.listeners['00000000']).toBe(l0);
+		expect(p.cbs['00000000']).toBe(l0);
 		expect(p.localEvents[0]).toMatchObject({
 			id: Buffer.from([0, 0, 0, 0]),
 			eventNameRegexp: '^e0$'
 		});
-		expect(p.listeners['00000001']).toBe(l1);
+		expect(p.cbs['00000001']).toBe(l1);
 		expect(p.localEvents[1]).toMatchObject({
 			id: Buffer.from([0, 0, 0, 1]),
 			eventNameRegexp: '^e1$'
@@ -114,8 +114,8 @@ test('call local listeners on emitted event', () => {
 	return partybus({}).then(async (p) => {
 		const obj = {};
 		let arg;
-		p.listeners['00000001'] = (a) => { arg = a; };
-		p.listeners['00000002'] = () => { arg = null; };
+		p.cbs['00000001'] = (a) => { arg = a; };
+		p.cbs['00000002'] = () => { arg = null; };
 		p.localEvents = [{
 			id: Buffer.from([0, 0, 0, 1]),
 			eventNameRegexp: '^a$',
@@ -135,7 +135,7 @@ test('call local listeners on emitted event', () => {
 test('store additional info in this context', () => {
 	return partybus({}).then(async (p) => {
 		let self;
-		p.listeners['00000001'] = function () { self = this; };
+		p.cbs['00000001'] = function () { self = this; };
 		p.localEvents = [{
 			id: Buffer.from([0, 0, 0, 1]),
 			eventNameRegexp: '^.*$',
@@ -179,7 +179,7 @@ test('react to event messages', () => {
 		const neigh = {};
 		let args;
 		let self;
-		p.listeners['00000001'] = function () {
+		p.cbs['00000001'] = function () {
 			self = this;
 			args = Array.prototype.slice.call(arguments);
 		};
@@ -238,7 +238,7 @@ test('convert dates to json', () => {
 test('convert json to buffers', () => {
 	return partybus({}).then(async (p) => {
 		let arg;
-		p.listeners['00000000'] = (a) => { arg = a; };
+		p.cbs['00000000'] = (a) => { arg = a; };
 		tubemail.__hood.emit('message', Buffer.concat([
 			Buffer.from([2]),
 			Buffer.from([0, 0, 0, 0]),
@@ -253,7 +253,7 @@ test('convert json to buffers', () => {
 test('convert json to dates', () => {
 	return partybus({}).then(async (p) => {
 		let arg;
-		p.listeners['00000000'] = (a) => { arg = a; };
+		p.cbs['00000000'] = (a) => { arg = a; };
 		tubemail.__hood.emit('message', Buffer.concat([
 			Buffer.from([2]),
 			Buffer.from([0, 0, 0, 0]),
@@ -336,8 +336,8 @@ test('remove events', () => {
 		const id2 = Buffer.from([0, 0, 0, 1]);
 		const l1 = () => {};
 		const l2 = () => {};
-		p.listeners[id1.toString('hex')] = l1;
-		p.listeners[id2.toString('hex')] = l2;
+		p.cbs[id1.toString('hex')] = l1;
+		p.cbs[id2.toString('hex')] = l2;
 		const event1 = { id: id1, eventNameSelector: 'a', listener: l1 };
 		const event2 = { id: id2, eventNameSelector: 'a', listener: l2 };
 		p.localEvents = [event1, event2];
@@ -346,7 +346,7 @@ test('remove events', () => {
 
 		expect(p.localEvents.length).toEqual(1);
 		expect(p.localEvents[0]).toBe(event2);
-		expect(p.listeners[id1.toString('hex')]).toBeUndefined();
+		expect(p.cbs[id1.toString('hex')]).toBeUndefined();
 	});
 });
 
@@ -354,7 +354,7 @@ test('notify peers about removed events', () => {
 	return partybus({}).then((p) => {
 		const id = Buffer.from([0, 0, 0, 0]);
 		const listener = () => {};
-		p.listeners[id.toString('hex')] = listener;
+		p.cbs[id.toString('hex')] = listener;
 		const event = { id, eventNameSelector: 'a', listener };
 		p.localEvents = [event];
 
@@ -375,9 +375,9 @@ test('remove events by selector', () => {
 		const id2 = Buffer.from([0, 0, 0, 1]);
 		const id3 = Buffer.from([0, 0, 0, 2]);
 		const listener = () => {};
-		p.listeners[id1.toString('hex')] = listener;
-		p.listeners[id2.toString('hex')] = listener;
-		p.listeners[id3.toString('hex')] = listener;
+		p.cbs[id1.toString('hex')] = listener;
+		p.cbs[id2.toString('hex')] = listener;
+		p.cbs[id3.toString('hex')] = listener;
 		const event1 = { id: id1, eventNameSelector: 'a', listener: listener };
 		const event2 = { id: id2, eventNameSelector: 'a', listener: listener };
 		const event3 = { id: id2, eventNameSelector: 'b', listener: listener };
@@ -396,9 +396,9 @@ test('remove all events', () => {
 		const id2 = Buffer.from([0, 0, 0, 1]);
 		const id3 = Buffer.from([0, 0, 0, 2]);
 		const listener = () => {};
-		p.listeners[id1.toString('hex')] = listener;
-		p.listeners[id2.toString('hex')] = listener;
-		p.listeners[id3.toString('hex')] = listener;
+		p.cbs[id1.toString('hex')] = listener;
+		p.cbs[id2.toString('hex')] = listener;
+		p.cbs[id3.toString('hex')] = listener;
 		const event1 = { id: id1, eventNameSelector: 'a', listener: listener };
 		const event2 = { id: id2, eventNameSelector: 'a', listener: listener };
 		const event3 = { id: id2, eventNameSelector: 'b', listener: listener };
@@ -431,7 +431,7 @@ test('throw an error if event name contains illegal characters', () => {
 
 test('observe listener count changes: local', () => {
 	return partybus({}).then((p) => {
-		const fn = () => {}
+		const fn = () => {};
 		p.on('a', fn);
 		const onChange = jest.fn();
 		p.observeListenerCount('a', onChange);
@@ -500,5 +500,19 @@ test('remove observer', () => {
 		abort();
 		p.on('a', () => {});
 		expect(onChange.mock.calls.length).toBe(1);
+	});
+});
+
+test('return destitions for an event', () => {
+	return partybus({}).then((p) => {
+		const neigh1 = {};
+		const neigh2 = {};
+		p.localEvents.push({eventName: /^a$/});
+		p.localEvents.push({eventName: /^b$/});
+		p.remoteEvents.push({eventName: /^a$/, neigh: neigh1});
+		p.remoteEvents.push({eventName: /^b$/, neigh: neigh2});
+		const l = p.listeners('a');
+		expect(l[0]).toBe(tubemail.__hood);
+		expect(l[1]).toBe(neigh1);
 	});
 });

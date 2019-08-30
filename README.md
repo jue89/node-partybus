@@ -131,6 +131,14 @@ const count = bus.listenerCount(event);
 
 Counts the amount of listeners listening for `event`.
 
+### Method: listeners
+
+```js
+const listeners = bus.listeners(event);
+```
+
+Returns an array of all listeners of `event`.
+
 ### Method: observeListenerCount
 
 ```js

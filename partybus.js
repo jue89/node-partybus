@@ -46,7 +46,7 @@ const decode = (msg) => {
 };
 
 function Partybus (hood) {
-	this.listeners = {};
+	this.cbs = {};
 	this.remoteEvents = [];
 	this.localEvents = [];
 	this.observers = [];
@@ -95,7 +95,7 @@ function Partybus (hood) {
 }
 
 Partybus.prototype._callListener = function (id, eventName, source, args) {
-	process.nextTick(() => this.listeners[id.toString('hex')].apply({
+	process.nextTick(() => this.cbs[id.toString('hex')].apply({
 		event: eventName,
 		source: source
 	}, args));
@@ -129,7 +129,7 @@ Partybus.prototype.on = function (eventNameSelector, listener) {
 		listener: listener
 	};
 	this.localEvents.push(event);
-	this.listeners[id.toString('hex')] = listener;
+	this.cbs[id.toString('hex')] = listener;
 	this._updateObservers(event, 1);
 
 	// Notify other peers about new event listener
@@ -148,7 +148,7 @@ Partybus.prototype._removeListener = function (removeTest) {
 		this.hood.send(encode(UNSUBSCRIBE, e.id));
 
 		// Remove event listener
-		delete this.listeners[e.id.toString('hex')];
+		delete this.cbs[e.id.toString('hex')];
 
 		// Update observers
 		this._updateObservers(e, -1);
@@ -194,11 +194,15 @@ Partybus.prototype.emit = function (eventName) {
 	return Promise.all(remoteJobs).then(() => localJobs.length + remoteJobs.length);
 };
 
-Partybus.prototype.listenerCount = function (eventName) {
+Partybus.prototype.listeners = function (eventName) {
 	checkEventNameEmit(eventName);
-	const l = this.localEvents.filter((e) => e.eventName.test(eventName)).length;
-	const r = this.remoteEvents.filter((e) => e.eventName.test(eventName)).length;
-	return l + r;
+	const l = this.localEvents.filter((e) => e.eventName.test(eventName)).map(() => this.hood);
+	const r = this.remoteEvents.filter((e) => e.eventName.test(eventName)).map((e) => e.neigh);
+	return l.concat(r);
+};
+
+Partybus.prototype.listenerCount = function (eventName) {
+	return this.listeners(eventName).length;
 };
 
 Partybus.prototype.observeListenerCount = function (eventName, cb) {
