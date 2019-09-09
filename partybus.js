@@ -4,6 +4,8 @@ const SUBSCRIBE = 0;
 const UNSUBSCRIBE = 1;
 const EVENT = 2;
 
+const SPYFLAG = 0x80;
+
 const encode = (type, id, payload) => {
 	if (payload !== undefined) {
 		// Dirty hack to convert Date to object instead of a string
@@ -46,9 +48,10 @@ const decode = (msg) => {
 };
 
 function Partybus (hood) {
-	this.listeners = {};
+	this.cbs = {};
 	this.remoteEvents = [];
 	this.localEvents = [];
+	this.observers = [];
 	this.cnt = 0;
 	this.hood = hood.on('foundNeigh', (neigh) => {
 		// Register all events at new neighbour
@@ -57,21 +60,29 @@ function Partybus (hood) {
 		});
 	}).on('lostNeigh', (neigh) => {
 		// Remove all events related to neigh
-		this.remoteEvents = this.remoteEvents.filter((e) => e.neigh !== neigh);
+		this.remoteEvents = this.remoteEvents.filter((e) => {
+			const keep = e.neigh !== neigh;
+			if (!keep) this._updateObservers(e, -1);
+			return keep;
+		});
 	}).on('message', (msg, neigh) => {
 		try {
 			if (msg.length < 5) return;
 			msg = decode(msg);
 			if (msg.type === SUBSCRIBE) {
-				this.remoteEvents.push({
+				const event = {
 					id: msg.id,
 					eventNameRegexp: msg.payload,
 					eventName: new RegExp(msg.payload),
 					neigh: neigh
-				});
+				};
+				this.remoteEvents.push(event);
+				this._updateObservers(event, 1);
 			} else if (msg.type === UNSUBSCRIBE) {
 				this.remoteEvents = this.remoteEvents.filter((e) => {
-					return !(e.neigh === neigh && Buffer.compare(e.id, msg.id) === 0);
+					const keep = !(e.neigh === neigh && Buffer.compare(e.id, msg.id) === 0);
+					if (!keep) this._updateObservers(e, -1);
+					return keep;
 				});
 			} else if (msg.type === EVENT) {
 				this._callListener(
@@ -86,32 +97,34 @@ function Partybus (hood) {
 }
 
 Partybus.prototype._callListener = function (id, eventName, source, args) {
-	this.listeners[id.toString('hex')].apply({
+	process.nextTick(() => this.cbs[id.toString('hex')].apply({
 		event: eventName,
 		source: source
-	}, args);
+	}, args));
 };
 
-const eventNameOn = /^[0-9a-zA-Z$.:_+#-]*$/;
-Partybus.prototype.on = function (eventNameSelector, listener) {
+const eventNameOn = /^[0-9a-zA-Z$.:_+#-][0-9a-zA-Z.:_+#-]*$/;
+Partybus.prototype.on = function (eventNameSelector, listener, opts) {
 	if (!eventNameOn.test(eventNameSelector)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ - + #');
 	}
 	if (typeof listener !== 'function') {
 		throw new Error('Event handler must be of type function');
 	}
+	if (!opts) opts = {};
 
 	// The ID identifies the event listener
 	// In combination with the tubemail ID it is unique
 	const id = Buffer.alloc(4);
 	id.writeUInt32BE(this.cnt++, 0);
+	if (opts.spy) id[0] |= SPYFLAG;
 
 	// Store listener and create a handle
 	const eventNameRegexp = '^' + eventNameSelector
 		.replace(/\./g, '\\.')
 		.replace(/\$/g, '\\$')
 		.replace(/\+/g, '[^\\.]*')
-		.replace(/#/g, '.*') + '$';
+		.replace(/#/g, '[^$]*') + '$';
 	const event = {
 		id: id,
 		eventNameSelector: eventNameSelector,
@@ -120,7 +133,8 @@ Partybus.prototype.on = function (eventNameSelector, listener) {
 		listener: listener
 	};
 	this.localEvents.push(event);
-	this.listeners[id.toString('hex')] = listener;
+	this.cbs[id.toString('hex')] = listener;
+	this._updateObservers(event, 1);
 
 	// Notify other peers about new event listener
 	this.hood.send(encode(SUBSCRIBE, id, event.eventNameRegexp));
@@ -138,7 +152,10 @@ Partybus.prototype._removeListener = function (removeTest) {
 		this.hood.send(encode(UNSUBSCRIBE, e.id));
 
 		// Remove event listener
-		delete this.listeners[e.id.toString('hex')];
+		delete this.cbs[e.id.toString('hex')];
+
+		// Update observers
+		this._updateObservers(e, -1);
 
 		return false;
 	});
@@ -158,21 +175,71 @@ Partybus.prototype.removeAllListeners = function (eventNameSelector) {
 	return this;
 };
 
-const eventNameEmit = /^[0-9a-zA-Z$.:_-]*$/;
-Partybus.prototype.emit = function (eventName) {
+const eventNameEmit = /^[0-9a-zA-Z$.:_-][0-9a-zA-Z.:_-]*$/;
+function checkEventNameEmit (eventName) {
 	if (!eventNameEmit.test(eventName)) {
 		throw new Error('Disallowed character in event name. Allowed: 0-9 a-z A-Z $ . : _ -');
 	}
+};
+
+Partybus.prototype.emit = function (eventName) {
+	checkEventNameEmit(eventName);
 
 	const args = Array.prototype.slice.call(arguments);
 
-	this.localEvents
+	const localJobs = this.localEvents
 		.filter((e) => e.eventName.test(eventName))
-		.forEach((e) => this._callListener(e.id, eventName, this.hood, args.slice(1)));
+		.map((e) => {
+			this._callListener(e.id, eventName, this.hood, args.slice(1));
+			return e;
+		})
+		.filter((e) => (e.id[0] & SPYFLAG) === 0x00);
 
-	this.remoteEvents
+	const remoteJobs = this.remoteEvents
 		.filter((e) => e.eventName.test(eventName))
-		.forEach((e) => e.neigh.send(encode(EVENT, e.id, args)));
+		.map((e) => {
+			e.neigh.send(encode(EVENT, e.id, args));
+			return e;
+		})
+		.filter((e) => (e.id[0] & SPYFLAG) === 0x00);
+
+	return Promise.all(remoteJobs).then(() => localJobs.length + remoteJobs.length);
+};
+
+Partybus.prototype.listeners = function (eventName) {
+	checkEventNameEmit(eventName);
+	const l = this.localEvents.filter((e) => {
+		if (e.id[0] & SPYFLAG) return false;
+		return e.eventName.test(eventName);
+	}).map(() => this.hood);
+	const r = this.remoteEvents.filter((e) => {
+		if (e.id[0] & SPYFLAG) return false;
+		return e.eventName.test(eventName);
+	}).map((e) => e.neigh);
+	return l.concat(r);
+};
+
+Partybus.prototype.listenerCount = function (eventName) {
+	return this.listeners(eventName).length;
+};
+
+Partybus.prototype.observeListenerCount = function (eventName, cb) {
+	let count = this.listenerCount(eventName);
+	const observer = {eventName, count, cb};
+	this.observers.push(observer);
+	cb(count);
+	return () => {
+		this.observers = this.observers.filter((o) => o !== observer);
+	};
+};
+
+Partybus.prototype._updateObservers = function (e, diff) {
+	if (e.id[0] & SPYFLAG) return;
+	this.observers.forEach((o) => {
+		if (!e.eventName.test(o.eventName)) return;
+		o.count += diff;
+		o.cb(o.count);
+	});
 };
 
 module.exports = (opts) => tubemail(opts).then((hood) => new Partybus(hood));

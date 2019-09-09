@@ -103,15 +103,15 @@ Information about the connection. See [Tube Mail Hood](https://github.com/jue89/
 ### Method: emit
 
 ```js
-bus.emit(event, [...args]);
+bus.emit(event, [...args]).then((cnt) => {...});
 ```
 
-Raises `event` and hands over optional `...args` to all listeners.
+Raises `event` and hands over optional `...args` to all listeners. Resolves `cnt` that states the count of called event handlers.
 
 ### Method: on
 
 ```js
-bus.on(selector, callback);
+bus.on(selector, callback[, opts]);
 ```
 
 With `selector` events to listen on is can be specified. On top it allows for wildcards:
@@ -121,6 +121,35 @@ With `selector` events to listen on is can be specified. On top it allows for wi
 The function `callback` is called if an event occurs that matches `selector`. The event's `...args` are the function call's arguments. In the function's scope `this` is an object with the items:
  * `event`: The event name. This is handy if many events would match `selector`.
  * `source`: The source of the event. For details lookup [Tube Mail Peer](https://github.com/jue89/node-tubemail#class-neighbour).
+
+The optional object `opts` may specify the following options:
+ * `spy`: Don't count this listener in when couting listeners. (cf. methods `listeners()`, `listenerCount()`, `observeListenerCount()`)
+
+### Method: listenerCount
+
+```js
+const count = bus.listenerCount(event);
+```
+
+Counts the amount of listeners listening for `event`.
+
+### Method: listeners
+
+```js
+const listeners = bus.listeners(event);
+```
+
+Returns an array of all listeners of `event`.
+
+### Method: observeListenerCount
+
+```js
+const stop = bus.observeListenerCount(event, (count) => {});
+```
+
+Calls the given callback with the `count` of listeners for `event` everytime when `count` changes. The callback will be called with the current `count` after the observer has been registered.
+
+Calling `stop()` will remove the observer.
 
 
 ### Method: removeListener
